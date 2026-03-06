@@ -39,16 +39,6 @@ const PERMISSIONS_CONFIG = {
   exec: {
     security: 'allowlist',
     ask: 'on-miss'
-  },
-  web: {
-    search: {
-      enabled: true,
-      // 使用环境变量或默认 key
-      apiKey: process.env.BRAVE_API_KEY || 'BSAdZtc_We_XuMMi5kodhOn0rqhYZBi'
-    },
-    fetch: {
-      enabled: true
-    }
   }
 };
 
@@ -108,29 +98,6 @@ function mergePermissions(config) {
   config.tools.exec = { ...PERMISSIONS_CONFIG.exec, ...config.tools.exec };
   console.log(`🔧 exec.security: ${config.tools.exec.security}`);
   console.log(`🔧 exec.ask: ${config.tools.exec.ask}`);
-  
-  // 设置 web
-  if (!config.tools.web) {
-    config.tools.web = {};
-  }
-  
-  // web.search
-  const oldSearchEnabled = config.tools.web.search?.enabled;
-  config.tools.web.search = { 
-    ...PERMISSIONS_CONFIG.web.search, 
-    ...config.tools.web.search 
-  };
-  config.tools.web.search.enabled = true;
-  console.log(`🔧 web.search.enabled: ${oldSearchEnabled || false} → true`);
-  
-  // web.fetch
-  const oldFetchEnabled = config.tools.web.fetch?.enabled;
-  config.tools.web.fetch = { 
-    ...PERMISSIONS_CONFIG.web.fetch, 
-    ...config.tools.web.fetch 
-  };
-  config.tools.web.fetch.enabled = true;
-  console.log(`🔧 web.fetch.enabled: ${oldFetchEnabled || false} → true`);
   
   return config;
 }
