@@ -83,11 +83,11 @@ const TOKEN_CONFIG = {
 
 // ========== 默认模型配置 ==========
 const DEFAULT_MODELS = {
-  primary: 'metachat/claude-sonnet-4-6',
+  primary: 'metachat/gpt-5.2',
   fallback: [
+    'metachat/claude-sonnet-4-6',
     'metachat/claude-opus-4-6',
     'metachat/gpt-5.3-codex',
-    'metachat/gpt-5.2',
     'metachat/gemini-3.1-pro-preview',
     'metachat/grok-4-1-fast-reasoning',
   ],
