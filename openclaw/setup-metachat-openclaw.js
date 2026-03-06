@@ -32,8 +32,6 @@ const METACHAT_MODELS = {
     { id: 'gpt-4.1-nano', name: 'GPT-4.1 Nano' },
     { id: 'gpt-4o', name: 'GPT-4o' },
     { id: 'gpt-4o-mini', name: 'GPT-4o Mini' },
-    { id: 'gpt-image-1.5', name: 'GPT Image 1.5' },
-    { id: 'gpt-image-1', name: 'GPT Image 1' },
   ],
   // Claude 系列
   claude: [
