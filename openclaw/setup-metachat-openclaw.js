@@ -10,6 +10,7 @@
  *   METACHAT_API_KEY - 必填，从 https://metachat.fun 获取
  * 
  * 变更记录:
+ *   2026-03-14 - v2.1: 新增 GPT-5.4、Gemini 3.1 Flash Lite、GLM 5、MiniMax M2.5
  *   2026-03-06 - v2.0: 更新模型清单（25+模型），添加参数自动修正（40万上下文/12.8万输出）
  */
 
@@ -21,6 +22,7 @@ const os = require('os');
 const METACHAT_MODELS = {
   // OpenAI 系列
   openai: [
+    { id: 'gpt-5.4', name: 'GPT-5.4' },
     { id: 'gpt-5.3-codex', name: 'GPT Codex 5.3' },
     { id: 'gpt-5.2', name: 'GPT-5.2' },
     { id: 'gpt-5.2-pro', name: 'GPT-5.2 Pro' },
@@ -44,6 +46,7 @@ const METACHAT_MODELS = {
   // Google Gemini 系列
   gemini: [
     { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro' },
+    { id: 'gemini-3.1-flash-lite-preview', name: 'Gemini 3.1 Flash Lite' },
     { id: 'gemini-3-pro-preview', name: 'Gemini 3 Pro' },
     { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash' },
     { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
@@ -58,8 +61,10 @@ const METACHAT_MODELS = {
   ],
   // 其他模型
   others: [
+    { id: 'minimax-m2.5', name: 'MiniMax M2.5' },
     { id: 'minimax-m2.1', name: 'MiniMax M2.1' },
     { id: 'kimi-k2.5', name: 'Kimi K2.5' },
+    { id: 'glm-5', name: 'GLM 5' },
     { id: 'glm-4.7', name: 'GLM 4.7' },
   ],
 };
@@ -345,7 +350,7 @@ function printSummary() {
 }
 
 function main() {
-  console.log('🔧 MetaChat OpenClaw 配置工具 v2.0\n');
+  console.log('🔧 MetaChat OpenClaw 配置工具 v2.1\n');
   
   checkApiKey();
   
