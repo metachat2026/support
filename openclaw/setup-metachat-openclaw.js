@@ -527,25 +527,33 @@ function rollback() {
   }
   
   // 3. 还原默认模型配置
-  if (injected.modifiedDefaultModel && config.agents?.defaults?.model) {
+  if (config.agents?.defaults?.model) {
+    const model = config.agents.defaults.model;
+    const primaryIsMetaChat = (model.primary || '').startsWith('metachat/');
+    
     if (injected.previousModel) {
-      // 有之前的配置，还原
+      // 有安装前备份，精准还原
       config.agents.defaults.model = injected.previousModel;
       console.log('  ✅ 已还原默认模型为安装前的配置');
-    } else if (!injected.hadPreviousModel) {
-      // 安装前没有 model 配置，删除整个 model 字段
-      delete config.agents.defaults.model;
-      console.log('  ✅ 已删除默认模型配置（安装前无此配置）');
-    } else {
-      // 自动检测模式或无法确定，只清除 metachat 引用
-      const model = config.agents.defaults.model;
-      if (model.primary && model.primary.startsWith('metachat/')) {
+      console.log(`     Primary: ${injected.previousModel.primary || '(无)'}`);
+    } else if (primaryIsMetaChat || (Array.isArray(model.fallbacks) && model.fallbacks.some(f => f.startsWith('metachat/')))) {
+      // 无备份（旧版安装），清除 metachat 引用
+      if (primaryIsMetaChat) {
         delete model.primary;
-        console.log('  ⚠️  已清除指向 MetaChat 的默认模型（无法还原原始值，请手动设置）');
       }
       if (Array.isArray(model.fallbacks)) {
+        const before = model.fallbacks.length;
         model.fallbacks = model.fallbacks.filter(f => !f.startsWith('metachat/'));
-        console.log('  ✅ 已从 fallback 链中移除 MetaChat 模型');
+        if (model.fallbacks.length === 0) delete model.fallbacks;
+      }
+      // 如果 primary 和 fallbacks 都没了，删掉整个 model 让 OpenClaw 用内置默认
+      if (!model.primary && !model.fallbacks) {
+        delete config.agents.defaults.model;
+        console.log('  ✅ 已清除 MetaChat 默认模型配置（OpenClaw 将使用内置默认模型）');
+      } else {
+        console.log('  ✅ 已从默认模型中移除 MetaChat 引用');
+        if (model.primary) console.log(`     保留 Primary: ${model.primary}`);
+        if (model.fallbacks) console.log(`     保留 Fallbacks: ${model.fallbacks.join(', ')}`);
       }
     }
     changes++;
