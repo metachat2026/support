@@ -4,14 +4,19 @@
  * 一键配置 MetaChat 模型到 OpenClaw，含参数自动修正和精准回退
  * 
  * 使用方法:
- *   node setup-metachat-openclaw.js              # 安装/更新
- *   node setup-metachat-openclaw.js --rollback   # 精准回退（只移除 MetaChat 配置）
- *   node setup-metachat-openclaw.js --status     # 查看当前安装状态
+ *   node setup-metachat-openclaw.js --key sk-xxx  # 安装（推荐，无需环境变量）
+ *   node setup-metachat-openclaw.js               # 安装（读取 METACHAT_API_KEY 环境变量）
+ *   node setup-metachat-openclaw.js --rollback    # 精准回退（只移除 MetaChat 配置）
+ *   node setup-metachat-openclaw.js --status      # 查看当前安装状态
+ * 
+ * 参数:
+ *   --key <api-key>  直接传入 API Key，无需设置环境变量
  * 
  * 环境变量:
- *   METACHAT_API_KEY - 安装时必填，从 https://metachat.fun 获取
+ *   METACHAT_API_KEY - 未使用 --key 时从此环境变量读取
  * 
  * 变更记录:
+ *   2026-03-24 - v2.4: 新增 --key 参数，支持直接传入 API Key 无需环境变量
  *   2026-03-24 - v2.3: 新增精准回退机制（--rollback），安装清单（manifest）
  *   2026-03-23 - v2.2: 新增 GPT-5.4 Mini/Nano、MiniMax M2.7
  *   2026-03-14 - v2.1: 新增 GPT-5.4、Gemini 3.1 Flash Lite、GLM 5、MiniMax M2.5
@@ -120,12 +125,28 @@ function getOpenClawConfigPath() {
 }
 
 function checkApiKey() {
-  const apiKey = process.env.METACHAT_API_KEY;
+  // 优先从 --key 参数读取
+  const args = process.argv.slice(2);
+  const keyIdx = args.indexOf('--key');
+  let apiKey = null;
+  
+  if (keyIdx !== -1 && args[keyIdx + 1]) {
+    apiKey = args[keyIdx + 1];
+    console.log('✅ API Key 已通过 --key 参数传入');
+  } else {
+    apiKey = process.env.METACHAT_API_KEY;
+    if (apiKey) {
+      console.log('✅ API Key 已从环境变量 METACHAT_API_KEY 读取');
+    }
+  }
   
   if (!apiKey) {
-    console.error('❌ 错误：未找到 METACHAT_API_KEY 环境变量');
-    console.log('\n请设置环境变量：');
-    console.log('  export METACHAT_API_KEY="your-api-key"');
+    console.error('❌ 错误：未提供 API Key');
+    console.log('\n请使用以下任一方式提供：');
+    console.log('  方式一（推荐）: node setup-metachat-openclaw.js --key your-api-key');
+    console.log('  方式二: export METACHAT_API_KEY="your-api-key" && node setup-metachat-openclaw.js');
+    console.log('\n  curl 一键安装:');
+    console.log('  curl -fsSL https://raw.githubusercontent.com/metachat2026/support/main/openclaw/setup-metachat-openclaw.js | node - --key your-api-key');
     console.log('\n获取 API Key:');
     console.log('  1. 访问 https://metachat.fun');
     console.log('  2. 登录后进入「API 管理」');
@@ -134,11 +155,10 @@ function checkApiKey() {
   }
   
   if (apiKey.length < 10) {
-    console.error('❌ 错误：METACHAT_API_KEY 格式看起来不正确');
+    console.error('❌ 错误：API Key 格式看起来不正确（太短）');
     process.exit(1);
   }
   
-  console.log('✅ METACHAT_API_KEY 已设置');
   return apiKey;
 }
 
@@ -219,18 +239,18 @@ function createMetaChatModelsWithTokens() {
   }));
 }
 
-function createMetaChatConfig() {
+function createMetaChatConfig(apiKey) {
   return {
     metachat: {
       baseUrl: DEFAULT_CONFIG.baseUrl,
-      apiKey: `\${${DEFAULT_CONFIG.apiKeyEnv}}`,
+      apiKey: apiKey || `\${${DEFAULT_CONFIG.apiKeyEnv}}`,
       api: DEFAULT_CONFIG.api,
       models: createMetaChatModelsWithTokens(),
     },
   };
 }
 
-function mergeConfig(existingConfig) {
+function mergeConfig(existingConfig, apiKey) {
   const newConfig = existingConfig ? { ...existingConfig } : {};
   
   // 检测是否已配置过 metachat provider
@@ -252,7 +272,7 @@ function mergeConfig(existingConfig) {
   }
   
   // 添加/更新 metachat provider
-  const metachatConfig = createMetaChatConfig();
+  const metachatConfig = createMetaChatConfig(apiKey);
   newConfig.models.providers.metachat = metachatConfig.metachat;
   
   // 添加/更新 agents.defaults.models 别名
@@ -270,12 +290,14 @@ function mergeConfig(existingConfig) {
   const aliases = generateModelAliases(ALL_MODELS);
   Object.assign(newConfig.agents.defaults.models, aliases);
   
-  // 添加环境变量声明
-  if (!newConfig.env) {
-    newConfig.env = {};
-  }
-  if (!newConfig.env.METACHAT_API_KEY) {
-    newConfig.env.METACHAT_API_KEY = '\${METACHAT_API_KEY}';
+  // 添加环境变量声明（仅当 key 通过环境变量方式使用时）
+  if (!apiKey || apiKey.startsWith('${')) {
+    if (!newConfig.env) {
+      newConfig.env = {};
+    }
+    if (!newConfig.env.METACHAT_API_KEY) {
+      newConfig.env.METACHAT_API_KEY = '\${METACHAT_API_KEY}';
+    }
   }
   
   // ========== 核心：参数修正 ==========
@@ -647,21 +669,22 @@ function main() {
   }
   
   if (args.includes('--help') || args.includes('-h')) {
-    console.log('🔧 MetaChat OpenClaw 配置工具 v2.3\n');
+    console.log('🔧 MetaChat OpenClaw 配置工具 v2.4\n');
     console.log('用法:');
-    console.log('  node setup-metachat-openclaw.js              安装/更新 MetaChat 模型');
+    console.log('  node setup-metachat-openclaw.js --key sk-xxx 安装（推荐，无需环境变量）');
+    console.log('  node setup-metachat-openclaw.js              安装（读取 METACHAT_API_KEY 环境变量）');
     console.log('  node setup-metachat-openclaw.js --rollback   精准回退（只移除 MetaChat 配置）');
     console.log('  node setup-metachat-openclaw.js --status     查看当前安装状态');
-    console.log('\n环境变量:');
-    console.log('  METACHAT_API_KEY    必填，从 https://metachat.fun 获取');
-    console.log('  OPENCLAW_CONFIG     可选，自定义配置文件路径');
+    console.log('\n参数:');
+    console.log('  --key <api-key>     直接传入 API Key，无需设置环境变量');
+    console.log('  OPENCLAW_CONFIG     可选，自定义配置文件路径（环境变量）');
     console.log('\n文档: https://metachat.apifox.cn');
     return;
   }
   
-  console.log('🔧 MetaChat OpenClaw 配置工具 v2.3\n');
+  console.log('🔧 MetaChat OpenClaw 配置工具 v2.4\n');
   
-  checkApiKey();
+  const apiKey = checkApiKey();
   
   const configPath = getOpenClawConfigPath();
   console.log(`📁 配置文件路径: ${configPath}\n`);
@@ -678,7 +701,7 @@ function main() {
     : null;
   const hadPreviousModel = !!previousModel;
   
-  const newConfig = mergeConfig(existingConfig);
+  const newConfig = mergeConfig(existingConfig, apiKey);
   saveConfig(configPath, newConfig);
   
   // 生成并保存安装清单
