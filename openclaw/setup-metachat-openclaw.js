@@ -408,19 +408,71 @@ function createManifest(modelIds, aliasKeys, hadPreviousModel) {
 }
 
 // ========== 精准回退 ==========
+
+function autoDetectManifest(configPath) {
+  // 旧版本没有 manifest，根据配置文件内容自动推断
+  let config;
+  try {
+    config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+  } catch {
+    return null;
+  }
+  
+  const hasMetaChatProvider = !!config.models?.providers?.metachat;
+  if (!hasMetaChatProvider) return null;
+  
+  // 找出所有 metachat/ 前缀的别名
+  const aliases = [];
+  if (config.agents?.defaults?.models) {
+    for (const key of Object.keys(config.agents.defaults.models)) {
+      if (key.startsWith('metachat/')) {
+        aliases.push(key);
+      }
+    }
+  }
+  
+  // 检查默认模型是否指向 metachat
+  const currentPrimary = config.agents?.defaults?.model?.primary || '';
+  const isMetaChatPrimary = currentPrimary.startsWith('metachat/');
+  
+  console.log(`  检测到 metachat provider（${config.models.providers.metachat.models?.length || 0} 个模型）`);
+  console.log(`  检测到 ${aliases.length} 个 metachat/ 别名`);
+  if (isMetaChatPrimary) {
+    console.log(`  检测到默认模型指向 MetaChat: ${currentPrimary}`);
+  }
+  console.log('');
+  
+  return {
+    version: MANIFEST_VERSION,
+    installedAt: 'unknown (auto-detected)',
+    scriptVersion: 'auto-detected',
+    injected: {
+      providers: ['metachat'],
+      modelAliases: aliases,
+      envKeys: ['METACHAT_API_KEY'],
+      modifiedDefaultModel: isMetaChatPrimary,
+      hadPreviousModel: false, // 未知，保守处理
+      previousModel: null,     // 无法还原
+    },
+  };
+}
+
 function rollback() {
   console.log('🔄 MetaChat 精准回退\n');
   
   const configPath = getOpenClawConfigPath();
-  const manifest = loadManifest();
+  let manifest = loadManifest();
   
   if (!manifest) {
-    console.log('ℹ️  未找到安装清单 (.metachat-manifest.json)');
-    console.log('   可能从未使用此脚本安装过 MetaChat，或清单已被删除。');
-    console.log('\n   如需手动清理，请编辑:');
-    console.log(`   ${configPath}`);
-    console.log('   删除 models.providers.metachat 和相关 agents.defaults.models 别名');
-    process.exit(1);
+    console.log('ℹ️  未找到安装清单（可能是旧版脚本安装的）');
+    console.log('   将根据 MetaChat 特征自动识别并清理...\n');
+    
+    // 自动生成 manifest 用于回退
+    manifest = autoDetectManifest(configPath);
+    if (!manifest) {
+      console.log('❌ 配置文件中未发现 MetaChat 相关配置，无需回退');
+      process.exit(0);
+    }
   }
   
   if (!fs.existsSync(configPath)) {
@@ -481,11 +533,20 @@ function rollback() {
       config.agents.defaults.model = injected.previousModel;
       console.log('  ✅ 已还原默认模型为安装前的配置');
     } else if (!injected.hadPreviousModel) {
-      // 安装前没有 model 配置，直接删除
+      // 安装前没有 model 配置，删除整个 model 字段
       delete config.agents.defaults.model;
       console.log('  ✅ 已删除默认模型配置（安装前无此配置）');
     } else {
-      console.log('  ⚠️  默认模型配置无法自动还原，请手动检查');
+      // 自动检测模式或无法确定，只清除 metachat 引用
+      const model = config.agents.defaults.model;
+      if (model.primary && model.primary.startsWith('metachat/')) {
+        delete model.primary;
+        console.log('  ⚠️  已清除指向 MetaChat 的默认模型（无法还原原始值，请手动设置）');
+      }
+      if (Array.isArray(model.fallbacks)) {
+        model.fallbacks = model.fallbacks.filter(f => !f.startsWith('metachat/'));
+        console.log('  ✅ 已从 fallback 链中移除 MetaChat 模型');
+      }
     }
     changes++;
   }

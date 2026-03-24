@@ -1,2 +1,0 @@
-# support
-MetaChat technical support
