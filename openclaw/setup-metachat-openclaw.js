@@ -1,15 +1,18 @@
 #!/usr/bin/env node
 /**
  * MetaChat OpenClaw 配置脚本
- * 一键配置 MetaChat 模型到 OpenClaw，含参数自动修正
+ * 一键配置 MetaChat 模型到 OpenClaw，含参数自动修正和精准回退
  * 
  * 使用方法:
- *   node setup-metachat-openclaw.js
+ *   node setup-metachat-openclaw.js              # 安装/更新
+ *   node setup-metachat-openclaw.js --rollback   # 精准回退（只移除 MetaChat 配置）
+ *   node setup-metachat-openclaw.js --status     # 查看当前安装状态
  * 
  * 环境变量:
- *   METACHAT_API_KEY - 必填，从 https://metachat.fun 获取
+ *   METACHAT_API_KEY - 安装时必填，从 https://metachat.fun 获取
  * 
  * 变更记录:
+ *   2026-03-24 - v2.3: 新增精准回退机制（--rollback），安装清单（manifest）
  *   2026-03-23 - v2.2: 新增 GPT-5.4 Mini/Nano、MiniMax M2.7
  *   2026-03-14 - v2.1: 新增 GPT-5.4、Gemini 3.1 Flash Lite、GLM 5、MiniMax M2.5
  *   2026-03-06 - v2.0: 更新模型清单（25+模型），添加参数自动修正（40万上下文/12.8万输出）
@@ -350,11 +353,244 @@ function printSummary() {
   console.log('     例如: metachat/gpt-5.2, metachat/claude-opus-4-6');
   console.log('\n📖 文档: https://metachat.apifox.cn');
   console.log('🌐 官网: https://metachat.fun');
+  console.log('\n🔙 回退: node setup-metachat-openclaw.js --rollback');
+  console.log('📊 状态: node setup-metachat-openclaw.js --status');
   console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 }
 
+// ========== Manifest（安装清单）==========
+const MANIFEST_VERSION = 1;
+
+function getManifestPath() {
+  const homeDir = os.homedir();
+  return path.join(homeDir, '.openclaw', '.metachat-manifest.json');
+}
+
+function saveManifest(manifest) {
+  const manifestPath = getManifestPath();
+  try {
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), 'utf-8');
+  } catch (err) {
+    console.warn('⚠️  保存安装清单失败:', err.message);
+  }
+}
+
+function loadManifest() {
+  const manifestPath = getManifestPath();
+  if (!fs.existsSync(manifestPath)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+  } catch {
+    return null;
+  }
+}
+
+function createManifest(modelIds, aliasKeys, hadPreviousModel) {
+  return {
+    version: MANIFEST_VERSION,
+    installedAt: new Date().toISOString(),
+    scriptVersion: 'v2.3',
+    injected: {
+      // 注入的 provider
+      providers: ['metachat'],
+      // 注入的模型别名 keys（如 "metachat/gpt-5.2"）
+      modelAliases: aliasKeys,
+      // 注入的 env keys
+      envKeys: ['METACHAT_API_KEY'],
+      // 是否修改了 agents.defaults.model
+      modifiedDefaultModel: true,
+      // 安装前是否已有 model 配置
+      hadPreviousModel,
+      // 安装前的 model 配置（用于精准还原）
+      previousModel: null, // 在 main 里填充
+    },
+  };
+}
+
+// ========== 精准回退 ==========
+function rollback() {
+  console.log('🔄 MetaChat 精准回退\n');
+  
+  const configPath = getOpenClawConfigPath();
+  const manifest = loadManifest();
+  
+  if (!manifest) {
+    console.log('ℹ️  未找到安装清单 (.metachat-manifest.json)');
+    console.log('   可能从未使用此脚本安装过 MetaChat，或清单已被删除。');
+    console.log('\n   如需手动清理，请编辑:');
+    console.log(`   ${configPath}`);
+    console.log('   删除 models.providers.metachat 和相关 agents.defaults.models 别名');
+    process.exit(1);
+  }
+  
+  if (!fs.existsSync(configPath)) {
+    console.log('ℹ️  OpenClaw 配置文件不存在，无需回退');
+    process.exit(0);
+  }
+  
+  let config;
+  try {
+    config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+  } catch (err) {
+    console.error('❌ 读取配置文件失败:', err.message);
+    process.exit(1);
+  }
+  
+  // 备份当前配置
+  backupConfig(configPath);
+  
+  const injected = manifest.injected;
+  let changes = 0;
+  
+  // 1. 删除 MetaChat provider
+  if (config.models?.providers) {
+    for (const provider of injected.providers) {
+      if (config.models.providers[provider]) {
+        delete config.models.providers[provider];
+        console.log(`  ✅ 已删除 provider: ${provider}`);
+        changes++;
+      }
+    }
+    // 如果 providers 为空，清理空对象
+    if (Object.keys(config.models.providers).length === 0) {
+      delete config.models.providers;
+    }
+    if (config.models && Object.keys(config.models).length === 0) {
+      delete config.models;
+    }
+  }
+  
+  // 2. 删除模型别名
+  if (config.agents?.defaults?.models && injected.modelAliases) {
+    for (const alias of injected.modelAliases) {
+      if (config.agents.defaults.models[alias]) {
+        delete config.agents.defaults.models[alias];
+        changes++;
+      }
+    }
+    if (Object.keys(config.agents.defaults.models).length === 0) {
+      delete config.agents.defaults.models;
+    }
+    console.log(`  ✅ 已删除 ${injected.modelAliases.length} 个模型别名`);
+  }
+  
+  // 3. 还原默认模型配置
+  if (injected.modifiedDefaultModel && config.agents?.defaults?.model) {
+    if (injected.previousModel) {
+      // 有之前的配置，还原
+      config.agents.defaults.model = injected.previousModel;
+      console.log('  ✅ 已还原默认模型为安装前的配置');
+    } else if (!injected.hadPreviousModel) {
+      // 安装前没有 model 配置，直接删除
+      delete config.agents.defaults.model;
+      console.log('  ✅ 已删除默认模型配置（安装前无此配置）');
+    } else {
+      console.log('  ⚠️  默认模型配置无法自动还原，请手动检查');
+    }
+    changes++;
+  }
+  
+  // 4. 删除注入的环境变量
+  if (config.env && injected.envKeys) {
+    for (const key of injected.envKeys) {
+      if (config.env[key]) {
+        delete config.env[key];
+        changes++;
+      }
+    }
+    if (Object.keys(config.env).length === 0) {
+      delete config.env;
+    }
+    console.log(`  ✅ 已清理环境变量声明`);
+  }
+  
+  // 保存
+  if (changes > 0) {
+    saveConfig(configPath, config);
+    // 删除 manifest
+    try {
+      fs.unlinkSync(getManifestPath());
+    } catch {}
+    console.log(`\n🎉 回退完成！共清理 ${changes} 项 MetaChat 配置`);
+    console.log('\n⚡ 请重启 OpenClaw Gateway:');
+    console.log('   openclaw gateway restart');
+  } else {
+    console.log('\nℹ️  未发现需要回退的 MetaChat 配置');
+  }
+}
+
+// ========== 查看状态 ==========
+function showStatus() {
+  console.log('📊 MetaChat 安装状态\n');
+  
+  const manifest = loadManifest();
+  const configPath = getOpenClawConfigPath();
+  
+  if (!manifest) {
+    console.log('状态: ❌ 未安装（无安装清单）');
+    
+    // 检查配置文件里是否有 metachat provider
+    if (fs.existsSync(configPath)) {
+      try {
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+        if (config.models?.providers?.metachat) {
+          console.log('\n⚠️  但配置文件中发现 metachat provider（可能是手动配置或旧版脚本安装）');
+          console.log('   模型数量:', config.models.providers.metachat.models?.length || 0);
+        }
+      } catch {}
+    }
+    return;
+  }
+  
+  console.log('状态: ✅ 已安装');
+  console.log(`脚本版本: ${manifest.scriptVersion}`);
+  console.log(`安装时间: ${manifest.installedAt}`);
+  console.log(`Provider: ${manifest.injected.providers.join(', ')}`);
+  console.log(`模型别名: ${manifest.injected.modelAliases?.length || 0} 个`);
+  console.log(`修改了默认模型: ${manifest.injected.modifiedDefaultModel ? '是' : '否'}`);
+  
+  // 检查实际配置是否还在
+  if (fs.existsSync(configPath)) {
+    try {
+      const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      const hasProvider = !!config.models?.providers?.metachat;
+      const modelCount = config.models?.providers?.metachat?.models?.length || 0;
+      console.log(`\n配置文件: ${hasProvider ? '✅ metachat provider 存在' : '⚠️  metachat provider 不存在'}`);
+      if (hasProvider) console.log(`实际模型数: ${modelCount}`);
+    } catch {}
+  }
+  
+  console.log('\n回退命令: node setup-metachat-openclaw.js --rollback');
+}
+
 function main() {
-  console.log('🔧 MetaChat OpenClaw 配置工具 v2.2\n');
+  // 解析命令行参数
+  const args = process.argv.slice(2);
+  
+  if (args.includes('--rollback') || args.includes('--uninstall') || args.includes('--remove')) {
+    rollback();
+    return;
+  }
+  
+  if (args.includes('--status') || args.includes('--info')) {
+    showStatus();
+    return;
+  }
+  
+  if (args.includes('--help') || args.includes('-h')) {
+    console.log('🔧 MetaChat OpenClaw 配置工具 v2.3\n');
+    console.log('用法:');
+    console.log('  node setup-metachat-openclaw.js              安装/更新 MetaChat 模型');
+    console.log('  node setup-metachat-openclaw.js --rollback   精准回退（只移除 MetaChat 配置）');
+    console.log('  node setup-metachat-openclaw.js --status     查看当前安装状态');
+    console.log('\n环境变量:');
+    console.log('  METACHAT_API_KEY    必填，从 https://metachat.fun 获取');
+    console.log('  OPENCLAW_CONFIG     可选，自定义配置文件路径');
+    console.log('\n文档: https://metachat.apifox.cn');
+    return;
+  }
+  
+  console.log('🔧 MetaChat OpenClaw 配置工具 v2.3\n');
   
   checkApiKey();
   
@@ -367,8 +603,22 @@ function main() {
     backupConfig(configPath);
   }
   
+  // 记录安装前的默认模型配置（用于回退还原）
+  const previousModel = existingConfig?.agents?.defaults?.model 
+    ? JSON.parse(JSON.stringify(existingConfig.agents.defaults.model))
+    : null;
+  const hadPreviousModel = !!previousModel;
+  
   const newConfig = mergeConfig(existingConfig);
   saveConfig(configPath, newConfig);
+  
+  // 生成并保存安装清单
+  const aliasKeys = ALL_MODELS.map(m => `metachat/${m.id}`);
+  const manifest = createManifest(ALL_MODELS.map(m => m.id), aliasKeys, hadPreviousModel);
+  manifest.injected.previousModel = previousModel;
+  saveManifest(manifest);
+  console.log('📋 已保存安装清单（支持 --rollback 精准回退）');
+  
   printSummary();
 }
 
