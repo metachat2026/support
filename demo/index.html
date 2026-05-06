@@ -4,324 +4,419 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MetaChat 企业控制台 Demo</title>
-<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/recharts@2/umd/Recharts.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
-<script src="https://cdn.tailwindcss.com"></script>
-<script>tailwind.config={theme:{extend:{colors:{primary:'#4f46e5','primary-light':'#eef2ff'}}}}</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:#f9fafb;color:#1f2937}
+.app{display:flex;height:100vh}
+/* Sidebar */
+.sidebar{width:256px;background:#fff;border-right:1px solid #e5e7eb;display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-logo{padding:16px;border-bottom:1px solid #f3f4f6}
+.sidebar-logo h1{font-size:18px;font-weight:700;color:#4f46e5}
+.sidebar-logo p{font-size:12px;color:#9ca3af}
+.sidebar-role{padding:12px;border-bottom:1px solid #f3f4f6}
+.sidebar-role label{font-size:12px;color:#9ca3af;display:block;margin-bottom:4px}
+.sidebar-role select{width:100%;font-size:14px;border:1px solid #e5e7eb;border-radius:6px;padding:6px 8px;outline:none}
+.sidebar-nav{flex:1;padding:12px}
+.sidebar-nav button{width:100%;text-align:left;padding:8px 12px;border:none;background:none;border-radius:8px;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:8px;color:#4b5563;margin-bottom:2px}
+.sidebar-nav button:hover{background:#f9fafb}
+.sidebar-nav button.active{background:#eef2ff;color:#4338ca;font-weight:500}
+.sidebar-user{padding:16px;border-top:1px solid #e5e7eb;display:flex;align-items:center;gap:12px}
+.sidebar-avatar{width:32px;height:32px;background:#e0e7ff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;color:#4338ca;font-weight:500}
+.sidebar-user .name{font-size:14px;font-weight:500}
+.sidebar-user .meta{font-size:12px;color:#9ca3af}
+/* Main */
+.main{flex:1;overflow:auto;padding:24px}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.page-header h2{font-size:20px;font-weight:700}
+/* Time Range */
+.time-range{display:flex;gap:4px;background:#f3f4f6;border-radius:8px;padding:4px}
+.time-range button{padding:6px 12px;font-size:14px;border:none;border-radius:6px;cursor:pointer;background:none;color:#4b5563}
+.time-range button.active{background:#fff;color:#4f46e5;font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.05)}
+/* Cards */
+.kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px}
+.kpi-card{background:#fff;border-radius:12px;padding:20px;border:1px solid #f3f4f6;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.kpi-card .label{font-size:14px;color:#6b7280}
+.kpi-card .value{font-size:24px;font-weight:700;margin-top:4px}
+.kpi-card .value .unit{font-size:14px;font-weight:400;color:#9ca3af}
+.kpi-card .change{font-size:12px;margin-top:4px}
+.kpi-card .change.up{color:#059669}
+.kpi-card .change.down{color:#ef4444}
+/* Charts Row */
+.charts-row{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:20px}
+.chart-box{background:#fff;border-radius:12px;padding:20px;border:1px solid #f3f4f6;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.chart-box h3{font-size:14px;font-weight:500;color:#374151;margin-bottom:16px}
+/* Bar Chart */
+.bar-chart{display:flex;align-items:flex-end;gap:6px;height:180px;padding-top:10px}
+.bar-group{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px}
+.bar-stack{display:flex;flex-direction:column;justify-content:flex-end;width:100%;height:170px}
+.bar-api{background:#4f46e5;border-radius:3px 3px 0 0;opacity:.85}
+.bar-web{background:#7c3aed;border-radius:3px 3px 0 0;opacity:.65}
+.bar-label{font-size:10px;color:#9ca3af;text-align:center}
+/* Donut */
+.donut-wrap{display:flex;flex-direction:column;align-items:center}
+.donut{width:130px;height:130px;border-radius:50%;position:relative;margin-bottom:12px}
+.donut-hole{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:70px;height:70px;background:#fff;border-radius:50%}
+.legend{width:100%}
+.legend-item{display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:3px 0}
+.legend-dot{width:10px;height:10px;border-radius:50%;margin-right:6px;flex-shrink:0}
+.legend-name{display:flex;align-items:center;color:#4b5563}
+.legend-pct{font-weight:500;color:#1f2937}
+/* Tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid #f3f4f6;padding:16px 20px 0}
+.tabs button{padding:8px 16px;font-size:14px;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;color:#6b7280;border-radius:8px 8px 0 0}
+.tabs button.active{background:#eef2ff;color:#4338ca;font-weight:500;border-bottom-color:#4f46e5}
+/* Table */
+.table-wrap{background:#fff;border-radius:12px;border:1px solid #f3f4f6;box-shadow:0 1px 2px rgba(0,0,0,.04);overflow:hidden}
+table{width:100%;font-size:14px;border-collapse:collapse}
+thead{background:#f9fafb}
+th{padding:12px;text-align:left;font-weight:500;color:#6b7280;font-size:13px}
+td{padding:10px 12px;border-top:1px solid #f9fafb}
+tr:hover{background:#f9fafb}
+.text-right{text-align:right}
+.font-medium{font-weight:500}
+.text-gray{color:#6b7280}
+.text-sm{font-size:12px}
+.text-xs{font-size:11px}
+.text-green{color:#059669}
+.text-red{color:#ef4444}
+.text-amber{color:#d97706}
+/* Tags */
+.tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:12px;margin:1px}
+.tag-blue{background:#eff6ff;color:#2563eb}
+.tag-purple{background:#f5f3ff;color:#7c3aed}
+.tag-gray{background:#f3f4f6;color:#4b5563}
+.tag-green{background:#ecfdf5;color:#059669}
+/* Button */
+.btn{padding:8px 16px;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-weight:500}
+.btn-primary{background:#4f46e5;color:#fff}.btn-primary:hover{background:#4338ca}
+.btn-outline{background:#fff;border:1px solid #e5e7eb;color:#374151}.btn-outline:hover{background:#f9fafb}
+/* Status */
+.status-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px}
+.status-active{background:#10b981}
+.status-disabled{background:#ef4444}
+/* Modal */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:50}
+.modal{background:#fff;border-radius:12px;padding:24px;width:480px;max-height:90vh;overflow:auto}
+.modal h3{font-size:18px;font-weight:700;margin-bottom:16px}
+.modal-footer{display:flex;justify-content:flex-end;gap:12px;margin-top:20px}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:14px;color:#4b5563;margin-bottom:4px}
+.form-input{width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none}
+.form-input:focus{border-color:#4f46e5;box-shadow:0 0 0 2px rgba(79,70,229,.15)}
+.form-select{width:100%;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;outline:none;background:#fff}
+.radio-group{display:flex;flex-direction:column;gap:8px}
+.radio-label{display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer}
+/* Balance Card */
+.balance-card{background:linear-gradient(135deg,#4f46e5,#7c3aed);border-radius:12px;padding:24px;color:#fff;box-shadow:0 4px 12px rgba(79,70,229,.3);margin-bottom:20px}
+.balance-card .bal-label{font-size:14px;opacity:.8}
+.balance-card .bal-value{font-size:36px;font-weight:700;margin-top:8px}
+.balance-card .bal-unit{font-size:16px;font-weight:400;opacity:.8}
+.balance-card .bal-note{font-size:12px;opacity:.7;margin-top:8px}
+.balance-card .bal-actions{display:flex;gap:12px;margin-top:16px}
+.btn-white{padding:8px 16px;background:#fff;color:#4f46e5;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer}
+.btn-ghost{padding:8px 16px;background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:8px;font-size:14px;cursor:pointer}
+/* Template Cards */
+.template-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.template-card{background:#fff;border-radius:12px;border:1px solid #f3f4f6;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.template-card h4{font-weight:500;font-size:15px}
+.template-card .tc-meta{font-size:14px;color:#4b5563;margin-top:12px;line-height:1.8}
+.template-card .tc-footer{display:flex;gap:12px;margin-top:16px;padding-top:12px;border-top:1px solid #f9fafb}
+.template-card .tc-footer button{background:none;border:none;font-size:14px;cursor:pointer}
+.tc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+/* Tag list */
+.tag-list-item{display:flex;align-items:center;justify-content:space-between;padding:16px 20px}
+.tag-list-item:not(:first-child){border-top:1px solid #f9fafb}
+.tag-list-item .tl-left{display:flex;align-items:center;gap:12px}
+.tag-list-item .tl-actions{display:flex;gap:8px}
+.tag-list-item .tl-actions button{background:none;border:none;font-size:14px;cursor:pointer;color:#6b7280}
+/* Upgrade Flow */
+.upgrade-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:linear-gradient(135deg,#eef2ff,#f5f3ff)}
+.upgrade-box{background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,.1);width:100%;max-width:640px;padding:32px}
+.steps{display:flex;align-items:center;justify-content:center;gap:8px;margin:24px 0 32px}
+.step-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:500}
+.step-dot.done{background:#4f46e5;color:#fff}
+.step-dot.pending{background:#f3f4f6;color:#9ca3af}
+.step-line{width:48px;height:2px}
+.step-line.done{background:#4f46e5}
+.step-line.pending{background:#e5e7eb}
+.hidden{display:none!important}
+.flex-between{display:flex;align-items:center;justify-content:space-between}
+.filter-bar{display:flex;gap:12px;margin-bottom:16px;align-items:center}
+.info-box{background:#f9fafb;border-radius:8px;padding:20px;margin-bottom:16px}
+.success-icon{width:64px;height:64px;background:#ecfdf5;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 16px}
+</style>
 </head>
-<body class="bg-gray-50 min-h-screen">
-<div id="root"></div>
-<script type="text/babel">
-const {useState} = React;
-const {AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell} = Recharts;
-
-// Mock Data
-const enterprise = {name:"星辰科技有限公司",balance:12380,totalMembers:35,activeMembers:23};
-const trendData = [
-  {date:"05/01",web:800,api:1200},{date:"05/02",web:650,api:1100},{date:"05/03",web:900,api:1400},
-  {date:"05/04",web:200,api:400},{date:"05/05",web:150,api:350},{date:"05/06",web:1100,api:1600},
-  {date:"05/07",web:950,api:1350},{date:"05/08",web:1050,api:1500},{date:"05/09",web:880,api:1320},
-  {date:"05/10",web:750,api:1150},{date:"05/11",web:200,api:300},{date:"05/12",web:180,api:280},
-  {date:"05/13",web:1000,api:1500},{date:"05/14",web:1100,api:1650}
+<body>
+<div id="root" class="app"></div>
+<script>
+// === Mock Data ===
+const enterprise={name:"星辰科技",balance:12380,total:35,active:23};
+const trend=[{d:"05/01",w:800,a:1200},{d:"05/02",w:650,a:1100},{d:"05/03",w:900,a:1400},{d:"05/04",w:200,a:400},{d:"05/05",w:150,a:350},{d:"05/06",w:1100,a:1600},{d:"05/07",w:950,a:1350},{d:"05/08",w:1050,a:1500},{d:"05/09",w:880,a:1320},{d:"05/10",w:750,a:1150},{d:"05/11",w:200,a:300},{d:"05/12",w:180,a:280},{d:"05/13",w:1000,a:1500},{d:"05/14",w:1100,a:1650}];
+const dist=[{n:"GPT-5.4",p:33.4,c:"#4f46e5"},{n:"Claude Opus",p:22.3,c:"#7c3aed"},{n:"GPT-5",p:11.9,c:"#2563eb"},{n:"Gemini 2.5",p:10.2,c:"#0891b2"},{n:"其他",p:22.2,c:"#d1d5db"}];
+const topModels=[{r:1,n:"GPT-5.4",cost:4200,calls:1230,p:33.4,t:12},{r:2,n:"Claude Opus",cost:2800,calls:890,p:22.3,t:5},{r:3,n:"GPT-5",cost:1500,calls:3400,p:11.9,t:-3},{r:4,n:"Gemini 2.5",cost:1280,calls:2100,p:10.2,t:8},{r:5,n:"Claude Sonnet",cost:980,calls:4500,p:7.8,t:0},{r:6,n:"Midjourney",cost:720,calls:180,p:5.7,t:25},{r:7,n:"GPT-4.1",cost:450,calls:2800,p:3.6,t:-10},{r:8,n:"Kimi K2.5",cost:320,calls:5600,p:2.5,t:0},{r:9,n:"Grok 4.1",cost:180,calls:620,p:1.4,t:50},{r:10,n:"DeepSeek-V3",cost:150,calls:8200,p:1.2,t:-5}];
+const topTags=[{r:1,n:"研发",mc:12,tc:6800,ac:567,p:54.1,tm:"GPT-5.4"},{r:2,n:"管理层",mc:3,tc:2100,ac:700,p:16.7,tm:"Claude Opus"},{r:3,n:"产品",mc:5,tc:1500,ac:300,p:11.9,tm:"GPT-5"},{r:4,n:"设计",mc:3,tc:1200,ac:400,p:9.5,tm:"Midjourney"},{r:5,n:"市场",mc:6,tc:620,ac:103,p:4.9,tm:"GPT-4.1"},{r:6,n:"销售",mc:8,tc:320,ac:40,p:2.5,tm:"Kimi K2.5"},{r:7,n:"行政",mc:2,tc:180,ac:90,p:1.4,tm:"GPT-4.1"},{r:8,n:"实习生",mc:5,tc:150,ac:30,p:1.2,tm:"DeepSeek-V3"}];
+const topTpl=[{r:1,n:"技术岗",mc:17,tc:8200,ac:482,p:65.2,cap:3},{r:2,n:"管理层",mc:3,tc:2100,ac:700,p:16.7,cap:0},{r:3,n:"设计岗",mc:3,tc:1200,ac:400,p:9.5,cap:0},{r:4,n:"行政岗",mc:8,tc:620,ac:78,p:4.9,cap:0},{r:5,n:"实习生",mc:5,tc:150,ac:30,p:1.2,cap:0},{r:6,n:"默认",mc:6,tc:120,ac:20,p:1.0,cap:0}];
+const members=[
+  {id:1,n:"张三",e:"zhang@star.com",role:"admin",tags:["研发","管理层"],tpl:"技术岗",st:"active",cost:2100,quota:2000,qp:"month"},
+  {id:2,n:"李四",e:"li@star.com",role:"member",tags:["研发"],tpl:"技术岗",st:"active",cost:1800,quota:2000,qp:"month"},
+  {id:3,n:"王五",e:"wang@star.com",role:"member",tags:["产品"],tpl:null,st:"active",cost:1200,quota:3000,qp:"month"},
+  {id:4,n:"赵六",e:"zhao@star.com",role:"member",tags:["研发"],tpl:"技术岗",st:"active",cost:2000,quota:2000,qp:"month"},
+  {id:5,n:"孙七",e:"sun@star.com",role:"member",tags:["设计"],tpl:"设计岗",st:"active",cost:850,quota:1500,qp:"month"},
+  {id:6,n:"周八",e:"zhou@star.com",role:"member",tags:["市场"],tpl:"行政岗",st:"active",cost:620,quota:500,qp:"month"},
+  {id:7,n:"吴九",e:"wu@star.com",role:"member",tags:["测试"],tpl:"技术岗",st:"active",cost:580,quota:2000,qp:"month"},
+  {id:8,n:"郑十",e:"zheng@star.com",role:"member",tags:["行政"],tpl:"行政岗",st:"active",cost:320,quota:500,qp:"month"},
+  {id:9,n:"陈一",e:"chen@star.com",role:"member",tags:["实习生"],tpl:"实习生",st:"active",cost:180,quota:20,qp:"day"},
+  {id:10,n:"林二",e:"lin@star.com",role:"member",tags:["销售"],tpl:"行政岗",st:"active",cost:150,quota:500,qp:"month"}
 ];
-const modelDist = [
-  {name:"GPT-5.4",cost:4200,pct:33.4},{name:"Claude Opus",cost:2800,pct:22.3},
-  {name:"GPT-5",cost:1500,pct:11.9},{name:"Gemini 2.5",cost:1280,pct:10.2},{name:"其他",cost:2800,pct:22.2}
+const allTags=[{n:"研发",c:12},{n:"产品",c:5},{n:"设计",c:3},{n:"测试",c:4},{n:"市场",c:6},{n:"销售",c:8},{n:"管理层",c:3},{n:"行政",c:2},{n:"实习生",c:5}];
+const templates=[
+  {id:1,n:"默认",mc:6,q:"不设限",m:"不限制",t:"全天候",d:true},
+  {id:2,n:"技术岗",mc:17,q:"月限 2000 元点",m:"白名单：GPT-5系列、Claude Sonnet系列",t:"09:00-18:00 · 周末停用",d:false},
+  {id:3,n:"行政岗",mc:8,q:"月限 500 元点",m:"白名单：GPT-4.1 Mini、Kimi K2.5",t:"全天候",d:false},
+  {id:4,n:"设计岗",mc:3,q:"月限 1500 元点",m:"白名单：GPT-5系列、Midjourney系列",t:"全天候",d:false},
+  {id:5,n:"管理层",mc:3,q:"不设限",m:"不限制",t:"全天候",d:false},
+  {id:6,n:"实习生",mc:5,q:"日限 20 元点",m:"白名单：GPT-4.1 Mini、Kimi K2.5、DeepSeek-V3",t:"09:00-18:00 · 周末停用",d:false}
 ];
-const COLORS = ["#4f46e5","#7c3aed","#2563eb","#0891b2","#d1d5db"];
-const topModels = [
-  {rank:1,name:"GPT-5.4",cost:4200,calls:1230,pct:33.4,trend:12},
-  {rank:2,name:"Claude Opus",cost:2800,calls:890,pct:22.3,trend:5},
-  {rank:3,name:"GPT-5",cost:1500,calls:3400,pct:11.9,trend:-3},
-  {rank:4,name:"Gemini 2.5",cost:1280,calls:2100,pct:10.2,trend:8},
-  {rank:5,name:"Claude Sonnet",cost:980,calls:4500,pct:7.8,trend:0},
-  {rank:6,name:"Midjourney",cost:720,calls:180,pct:5.7,trend:25},
-  {rank:7,name:"GPT-4.1",cost:450,calls:2800,pct:3.6,trend:-10},
-  {rank:8,name:"Kimi K2.5",cost:320,calls:5600,pct:2.5,trend:0},
-  {rank:9,name:"Grok 4.1",cost:180,calls:620,pct:1.4,trend:50},
-  {rank:10,name:"DeepSeek-V3",cost:150,calls:8200,pct:1.2,trend:-5}
+const bills=[
+  {d:"2026-05-06",m:"张三",ch:"API",mod:"GPT-5.4",cost:85},
+  {d:"2026-05-06",m:"李四",ch:"网页端",mod:"Claude Opus",cost:62},
+  {d:"2026-05-06",m:"王五",ch:"API",mod:"GPT-5",cost:45},
+  {d:"2026-05-05",m:"张三",ch:"网页端",mod:"GPT-5.4",cost:120},
+  {d:"2026-05-05",m:"赵六",ch:"API",mod:"Gemini 2.5",cost:38},
+  {d:"2026-05-05",m:"孙七",ch:"网页端",mod:"Midjourney",cost:95},
+  {d:"2026-05-04",m:"周八",ch:"API",mod:"GPT-4.1 Mini",cost:12},
+  {d:"2026-05-04",m:"吴九",ch:"网页端",mod:"Claude Sonnet",cost:28}
 ];
-const members = [
-  {id:1,name:"张三",email:"zhang@star.com",role:"admin",tags:["研发","管理层"],template:"技术岗",status:"active",cost:2100,quota:2000,qp:"month"},
-  {id:2,name:"李四",email:"li@star.com",role:"member",tags:["研发"],template:"技术岗",status:"active",cost:1800,quota:2000,qp:"month"},
-  {id:3,name:"王五",email:"wang@star.com",role:"member",tags:["产品"],template:null,status:"active",cost:1200,quota:3000,qp:"month"},
-  {id:4,name:"赵六",email:"zhao@star.com",role:"member",tags:["研发"],template:"技术岗",status:"active",cost:2000,quota:2000,qp:"month"},
-  {id:5,name:"孙七",email:"sun@star.com",role:"member",tags:["设计"],template:"设计岗",status:"active",cost:850,quota:1500,qp:"month"},
-  {id:6,name:"周八",email:"zhou@star.com",role:"member",tags:["市场"],template:"行政岗",status:"active",cost:620,quota:500,qp:"month"},
-  {id:7,name:"吴九",email:"wu@star.com",role:"member",tags:["测试"],template:"技术岗",status:"active",cost:580,quota:2000,qp:"month"},
-  {id:8,name:"郑十",email:"zheng@star.com",role:"member",tags:["行政"],template:"行政岗",status:"active",cost:320,quota:500,qp:"month"},
-  {id:9,name:"陈一",email:"chen@star.com",role:"member",tags:["实习生"],template:"实习生",status:"active",cost:180,quota:20,qp:"day"},
-  {id:10,name:"林二",email:"lin@star.com",role:"member",tags:["销售"],template:"行政岗",status:"active",cost:150,quota:500,qp:"month"}
-];
-const tags = ["研发","产品","设计","测试","市场","销售","管理层","行政","实习生"];
-const templates = [
-  {id:1,name:"默认",count:6,quota:"不设限",model:"不限制",time:"全天候",isDefault:true},
-  {id:2,name:"技术岗",count:17,quota:"月限 2000 元点",model:"白名单: GPT-5系列, Claude Sonnet系列",time:"09:00-18:00 · 周末停用",isDefault:false},
-  {id:3,name:"行政岗",count:8,quota:"月限 500 元点",model:"白名单: GPT-4.1 Mini, Kimi K2.5",time:"全天候",isDefault:false},
-  {id:4,name:"设计岗",count:3,quota:"月限 1500 元点",model:"白名单: GPT-5系列, Midjourney系列",time:"全天候",isDefault:false},
-  {id:5,name:"管理层",count:3,quota:"不设限",model:"不限制",time:"全天候",isDefault:false},
-  {id:6,name:"实习生",count:5,quota:"日限 20 元点",model:"白名单: GPT-4.1 Mini, Kimi K2.5, DeepSeek-V3",time:"09:00-18:00 · 周末停用",isDefault:false}
-];
+const recharges=[{d:"2026-05-01",a:10000,m:"对公转账",inv:"已开具"},{d:"2026-04-15",a:5000,m:"微信支付",inv:"未申请"},{d:"2026-04-01",a:10000,m:"对公转账",inv:"已开具"}];
 
-// === Components ===
-function Sidebar({page, setPage, role, setRole}) {
-  const ownerTabs = [{id:"dashboard",icon:"📊",label:"总览"},{id:"members",icon:"👥",label:"成员管理"},{id:"tags",icon:"🏷️",label:"成员标签"},{id:"templates",icon:"📋",label:"限额模板"},{id:"bills",icon:"📄",label:"账单看板"},{id:"recharge",icon:"💰",label:"充值管理"}];
-  const tabs = role==="owner"?ownerTabs:role==="admin"?ownerTabs.filter(t=>t.id!=="recharge"):[{id:"dashboard",icon:"📊",label:"我的用量"}];
-  return (
-    <aside className="w-64 bg-white border-r border-gray-200 flex flex-col h-full shrink-0">
-      <div className="p-4 border-b"><h1 className="text-lg font-bold text-primary">MetaChat</h1><p className="text-xs text-gray-500">企业控制台 Demo</p></div>
-      <div className="p-3 border-b"><label className="text-xs text-gray-500 block mb-1">视角切换</label>
-        <select value={role} onChange={e=>setRole(e.target.value)} className="w-full text-sm border rounded px-2 py-1.5">
-          <option value="owner">Owner（主账号）</option><option value="admin">Admin（管理员）</option><option value="member">Member（子账号）</option>
-        </select>
-      </div>
-      <nav className="flex-1 p-3 space-y-1">{tabs.map(t=>(
-        <button key={t.id} onClick={()=>setPage(t.id)} className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 ${page===t.id?"bg-indigo-50 text-indigo-700 font-medium":"text-gray-600 hover:bg-gray-50"}`}><span>{t.icon}</span>{t.label}</button>
-      ))}</nav>
-      <div className="p-4 border-t"><div className="flex items-center gap-3">
-        <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center text-sm">{role==="owner"?"A":"张"}</div>
-        <div><p className="text-sm font-medium">{role==="owner"?"Alan":"张三"}</p><p className="text-xs text-gray-500">企业版 · {enterprise.balance.toLocaleString()} 元点</p></div>
-      </div></div>
-    </aside>
-  );
+// === State ===
+const state={page:"dashboard",role:"owner",timeRange:"本月",topTab:"model",memberFilter:"全部"};
+
+// === Render Helpers ===
+function fmt(n){return n.toLocaleString()}
+function el(tag,attrs,children){
+  const e=document.createElement(tag);
+  if(attrs){for(const k in attrs){if(k==="class")e.className=attrs[k];else if(k==="onclick")e.onclick=attrs[k];else if(k==="onchange")e.onchange=attrs[k];else if(k==="html")e.innerHTML=attrs[k];else e.setAttribute(k,attrs[k])}}
+  if(children){if(Array.isArray(children))children.forEach(c=>{if(c)e.appendChild(typeof c==="string"?document.createTextNode(c):c)});else if(typeof children==="string")e.textContent=children;else e.appendChild(children)}
+  return e;
 }
 
-function Dashboard() {
-  const [timeRange, setTimeRange] = useState("本月");
-  const [topTab, setTopTab] = useState("model");
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-gray-800">总览 Dashboard</h2>
-        <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-          {["今日","本周","本月","上月"].map(t=><button key={t} onClick={()=>setTimeRange(t)} className={`px-3 py-1.5 text-sm rounded-md ${timeRange===t?"bg-white text-indigo-600 shadow-sm font-medium":"text-gray-600"}`}>{t}</button>)}
+function renderSidebar(){
+  const all=[{id:"dashboard",icon:"📊",l:"总览"},{id:"members",icon:"👥",l:"成员管理"},{id:"tags",icon:"🏷️",l:"成员标签"},{id:"templates",icon:"📋",l:"限额模板"},{id:"bills",icon:"📄",l:"账单看板"},{id:"recharge",icon:"💰",l:"充值管理"}];
+  const tabs=state.role==="owner"?all:state.role==="admin"?all.filter(t=>t.id!=="recharge"):[{id:"dashboard",icon:"📊",l:"我的用量"}];
+  const sidebar=el("aside",{class:"sidebar"});
+  sidebar.innerHTML=`
+    <div class="sidebar-logo"><h1>MetaChat</h1><p>企业控制台 Demo</p></div>
+    <div class="sidebar-role"><label>视角切换</label>
+      <select id="role-select">
+        <option value="owner"${state.role==="owner"?" selected":""}>Owner（主账号）</option>
+        <option value="admin"${state.role==="admin"?" selected":""}>Admin（管理员）</option>
+        <option value="member"${state.role==="member"?" selected":""}>Member（子账号）</option>
+      </select>
+    </div>
+    <nav class="sidebar-nav">${tabs.map(t=>`<button data-page="${t.id}" class="${state.page===t.id?"active":""}"><span>${t.icon}</span>${t.l}</button>`).join("")}</nav>
+    <div class="sidebar-user"><div class="sidebar-avatar">${state.role==="owner"?"A":state.role==="admin"?"张":"李"}</div>
+      <div><div class="name">${state.role==="owner"?"Alan":state.role==="admin"?"张三":"李四"}</div><div class="meta">企业版 · ${fmt(enterprise.balance)} 元点</div></div>
+    </div>`;
+  sidebar.querySelector("#role-select").onchange=e=>{state.role=e.target.value;render()};
+  sidebar.querySelectorAll("[data-page]").forEach(b=>b.onclick=()=>{state.page=b.dataset.page;render()});
+  return sidebar;
+}
+
+function renderDashboard(){
+  const main=document.createElement("div");
+  const maxTrend=Math.max(...trend.map(d=>d.w+d.a));
+  main.innerHTML=`
+    <div class="page-header">
+      <h2>总览 Dashboard</h2>
+      <div class="time-range">${["今日","本周","本月","上月"].map(t=>`<button data-tr="${t}" class="${state.timeRange===t?"active":""}">${t}</button>`).join("")}</div>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi-card"><div class="label">消耗总额</div><div class="value">12,580 <span class="unit">元点</span></div><div class="change up">↑ 15% vs 上月</div></div>
+      <div class="kpi-card"><div class="label">活跃成员</div><div class="value">23 / 35 <span class="unit">人</span></div><div class="change">65% 活跃度</div></div>
+      <div class="kpi-card"><div class="label">调用次数</div><div class="value">45,230 <span class="unit">次</span></div><div class="change up">↑ 8% vs 上月</div></div>
+    </div>
+    <div class="charts-row">
+      <div class="chart-box">
+        <h3>消耗趋势（${state.timeRange}）</h3>
+        <div class="bar-chart">${trend.map(d=>{
+          const apiH=(d.a/maxTrend)*170;const webH=(d.w/maxTrend)*170;
+          return `<div class="bar-group"><div class="bar-stack"><div class="bar-web" style="height:${webH}px"></div><div class="bar-api" style="height:${apiH}px"></div></div><div class="bar-label">${d.d}</div></div>`;
+        }).join("")}</div>
+        <div style="display:flex;gap:16px;margin-top:8px;font-size:12px">
+          <span><span style="display:inline-block;width:10px;height:10px;background:#4f46e5;border-radius:2px;margin-right:4px"></span>API</span>
+          <span><span style="display:inline-block;width:10px;height:10px;background:#7c3aed;opacity:.65;border-radius:2px;margin-right:4px"></span>网页端</span>
         </div>
       </div>
-      {/* KPI */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl p-5 border shadow-sm"><p className="text-sm text-gray-500">消耗总额</p><p className="text-2xl font-bold mt-1">12,580 <span className="text-sm font-normal text-gray-500">元点</span></p><p className="text-xs text-green-600 mt-1">↑ 15% vs 上月</p></div>
-        <div className="bg-white rounded-xl p-5 border shadow-sm"><p className="text-sm text-gray-500">活跃成员</p><p className="text-2xl font-bold mt-1">23 / 35 <span className="text-sm font-normal text-gray-500">人</span></p><p className="text-xs text-gray-500 mt-1">65% 活跃度</p></div>
-        <div className="bg-white rounded-xl p-5 border shadow-sm"><p className="text-sm text-gray-500">调用次数</p><p className="text-2xl font-bold mt-1">45,230 <span className="text-sm font-normal text-gray-500">次</span></p><p className="text-xs text-green-600 mt-1">↑ 8% vs 上月</p></div>
-      </div>
-      {/* Charts */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="col-span-2 bg-white rounded-xl p-5 border shadow-sm">
-          <h3 className="text-sm font-medium text-gray-700 mb-4">消耗趋势（{timeRange}）</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={trendData}><CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0"/><XAxis dataKey="date" tick={{fontSize:12}}/><YAxis tick={{fontSize:12}}/><Tooltip/>
-              <Area type="monotone" dataKey="api" stackId="1" stroke="#4f46e5" fill="#4f46e5" fillOpacity={0.3} name="API"/>
-              <Area type="monotone" dataKey="web" stackId="1" stroke="#7c3aed" fill="#7c3aed" fillOpacity={0.2} name="网页端"/>
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="bg-white rounded-xl p-5 border shadow-sm">
-          <h3 className="text-sm font-medium text-gray-700 mb-4">模型消耗分布</h3>
-          <ResponsiveContainer width="100%" height={150}>
-            <PieChart><Pie data={modelDist} dataKey="cost" nameKey="name" cx="50%" cy="50%" innerRadius={35} outerRadius={60}>
-              {modelDist.map((_,i)=><Cell key={i} fill={COLORS[i]}/>)}
-            </Pie><Tooltip/></PieChart>
-          </ResponsiveContainer>
-          <div className="space-y-1 mt-2">{modelDist.map((m,i)=>(
-            <div key={m.name} className="flex items-center justify-between text-xs"><div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full inline-block" style={{backgroundColor:COLORS[i]}}/><span className="text-gray-600">{m.name}</span></div><span className="font-medium">{m.pct}%</span></div>
-          ))}</div>
-        </div>
-      </div>
-      {/* TOP */}
-      <div className="bg-white rounded-xl border shadow-sm">
-        <div className="border-b px-5 pt-4 flex gap-1">
-          {[["model","TOP 模型"],["member","TOP 子账号"],["tag","TOP 标签"],["template","TOP 模板"]].map(([k,l])=>(
-            <button key={k} onClick={()=>setTopTab(k)} className={`px-4 py-2 text-sm rounded-t-lg ${topTab===k?"bg-indigo-50 text-indigo-700 font-medium border-b-2 border-indigo-600":"text-gray-500"}`}>{l}</button>
-          ))}
-        </div>
-        <div className="p-5">
-          {topTab==="model"&&<table className="w-full text-sm"><thead><tr className="text-left text-gray-500 border-b"><th className="pb-2">#</th><th className="pb-2">模型</th><th className="pb-2 text-right">消耗</th><th className="pb-2 text-right">调用</th><th className="pb-2 text-right">占比</th><th className="pb-2 text-right">趋势</th></tr></thead><tbody>
-            {topModels.map(m=><tr key={m.rank} className="border-b border-gray-50 hover:bg-gray-50"><td className="py-2 text-gray-400">{m.rank}</td><td className="py-2 font-medium">{m.name}</td><td className="py-2 text-right">{m.cost.toLocaleString()}</td><td className="py-2 text-right text-gray-500">{m.calls.toLocaleString()}</td><td className="py-2 text-right text-gray-500">{m.pct}%</td><td className={`py-2 text-right ${m.trend>0?"text-green-600":m.trend<0?"text-red-500":"text-gray-400"}`}>{m.trend>0?"↑":m.trend<0?"↓":"→"}{Math.abs(m.trend)}%</td></tr>)}
-          </tbody></table>}
-          {topTab==="member"&&<table className="w-full text-sm"><thead><tr className="text-left text-gray-500 border-b"><th className="pb-2">#</th><th className="pb-2">成员</th><th className="pb-2">标签</th><th className="pb-2">模板</th><th className="pb-2 text-right">消耗</th><th className="pb-2 text-right">限额</th></tr></thead><tbody>
-            {members.sort((a,b)=>b.cost-a.cost).map((m,i)=>{const r=m.quota>0?m.cost/m.quota:0;return <tr key={m.id} className={`border-b border-gray-50 ${r>=1?"bg-red-50":""}`}><td className="py-2 text-gray-400">{i+1}</td><td className="py-2"><p className="font-medium">{m.name}</p><p className="text-xs text-gray-400">{m.email}</p></td><td className="py-2"><div className="flex gap-1 flex-wrap">{m.tags.map(t=><span key={t} className="px-1.5 py-0.5 bg-gray-100 rounded text-xs">{t}</span>)}</div></td><td className="py-2 text-gray-600">{m.template||"—"}</td><td className="py-2 text-right font-medium">{m.cost.toLocaleString()}</td><td className="py-2 text-right text-xs">{r>=1?"🔴":r>=0.8?"🟡":"🟢"} {m.qp==="day"?`日限${m.quota}`:`月限${m.quota.toLocaleString()}`}</td></tr>})}
-          </tbody></table>}
-          {topTab==="tag"&&<div className="text-sm text-gray-500">标签维度 TOP 排行（研发 54.1% → 管理层 16.7% → 产品 11.9% → 设计 9.5% → ...）</div>}
-          {topTab==="template"&&<div className="text-sm text-gray-500">模板维度 TOP 排行（技术岗 65.2% → 管理层 16.7% → 设计岗 9.5% → 行政岗 4.9% → ...）</div>}
+      <div class="chart-box">
+        <h3>模型消耗分布</h3>
+        <div class="donut-wrap">
+          <div class="donut" style="background:conic-gradient(${dist.map((d,i)=>{const a=dist.slice(0,i).reduce((s,x)=>s+x.p,0);return `${d.c} ${a}% ${a+d.p}%`}).join(",")})"><div class="donut-hole"></div></div>
+          <div class="legend">${dist.map(d=>`<div class="legend-item"><div class="legend-name"><span class="legend-dot" style="background:${d.c}"></span>${d.n}</div><span class="legend-pct">${d.p}%</span></div>`).join("")}</div>
         </div>
       </div>
     </div>
-  );
+    <div class="table-wrap">
+      <div class="tabs">${[["model","TOP 模型"],["member","TOP 子账号"],["tag","TOP 标签"],["template","TOP 模板"]].map(([k,l])=>`<button data-tab="${k}" class="${state.topTab===k?"active":""}">${l}</button>`).join("")}</div>
+      <div style="padding:20px" id="top-content"></div>
+    </div>`;
+  main.querySelectorAll("[data-tr]").forEach(b=>b.onclick=()=>{state.timeRange=b.dataset.tr;render()});
+  main.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{state.topTab=b.dataset.tab;render()});
+  // top content
+  const tc=main.querySelector("#top-content");
+  if(state.topTab==="model"){
+    tc.innerHTML=`<table><thead><tr><th>#</th><th>模型</th><th class="text-right">消耗(元点)</th><th class="text-right">调用次数</th><th class="text-right">占比</th><th class="text-right">趋势</th></tr></thead><tbody>${topModels.map(m=>`<tr><td class="text-gray">${m.r}</td><td class="font-medium">${m.n}</td><td class="text-right">${fmt(m.cost)}</td><td class="text-right text-gray">${fmt(m.calls)}</td><td class="text-right text-gray">${m.p}%</td><td class="text-right ${m.t>0?"text-green":m.t<0?"text-red":"text-gray"}">${m.t>0?"↑":m.t<0?"↓":"→"} ${Math.abs(m.t)}%</td></tr>`).join("")}</tbody></table>`;
+  } else if(state.topTab==="member"){
+    const sorted=[...members].sort((a,b)=>b.cost-a.cost).slice(0,10);
+    tc.innerHTML=`<table><thead><tr><th>#</th><th>成员</th><th>标签</th><th>模板</th><th class="text-right">消耗</th><th class="text-right">限额</th></tr></thead><tbody>${sorted.map((m,i)=>{const r=m.quota>0?m.cost/m.quota:0;const ic=r>=1?"🔴":r>=.8?"🟡":"🟢";return `<tr style="${r>=1?"background:#fef2f2":""}"><td class="text-gray">${i+1}</td><td><div class="font-medium">${m.n}</div><div class="text-xs text-gray">${m.e}</div></td><td>${m.tags.map(t=>`<span class="tag tag-blue">${t}</span>`).join("")}</td><td class="text-gray">${m.tpl||"—"}</td><td class="text-right font-medium">${fmt(m.cost)}</td><td class="text-right text-xs">${ic} ${m.qp==="day"?"日限"+m.quota:"月限"+fmt(m.quota)}</td></tr>`}).join("")}</tbody></table>`;
+  } else if(state.topTab==="tag"){
+    tc.innerHTML=`<table><thead><tr><th>#</th><th>标签</th><th class="text-right">成员数</th><th class="text-right">总消耗</th><th class="text-right">人均消耗</th><th class="text-right">占比</th><th>主要模型</th></tr></thead><tbody>${topTags.map(t=>`<tr><td class="text-gray">${t.r}</td><td class="font-medium">${t.n}</td><td class="text-right">${t.mc}人</td><td class="text-right">${fmt(t.tc)}</td><td class="text-right text-gray">${t.ac}</td><td class="text-right text-gray">${t.p}%</td><td class="text-gray">${t.tm}</td></tr>`).join("")}</tbody></table>`;
+  } else {
+    tc.innerHTML=`<table><thead><tr><th>#</th><th>模板</th><th class="text-right">关联人数</th><th class="text-right">总消耗</th><th class="text-right">人均</th><th class="text-right">占比</th><th class="text-right">触顶人数</th></tr></thead><tbody>${topTpl.map(t=>`<tr><td class="text-gray">${t.r}</td><td class="font-medium">${t.n}</td><td class="text-right">${t.mc}人</td><td class="text-right">${fmt(t.tc)}</td><td class="text-right text-gray">${t.ac}</td><td class="text-right text-gray">${t.p}%</td><td class="text-right ${t.cap>0?"text-red font-medium":"text-gray"}">${t.cap}人</td></tr>`).join("")}</tbody></table>`;
+  }
+  return main;
 }
 
-function MemberManagement() {
-  const [filter, setFilter] = useState("全部");
-  const [showInvite, setShowInvite] = useState(false);
-  const [showEdit, setShowEdit] = useState(null);
-  const filtered = filter==="全部"?members:members.filter(m=>m.tags.includes(filter));
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between"><h2 className="text-xl font-bold">成员管理</h2><button onClick={()=>setShowInvite(true)} className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700">+ 邀请成员</button></div>
-      <div className="flex gap-3"><input placeholder="搜索成员" className="px-3 py-2 border rounded-lg text-sm w-64"/>
-        <select value={filter} onChange={e=>setFilter(e.target.value)} className="px-3 py-2 border rounded-lg text-sm"><option>全部</option>{tags.map(t=><option key={t}>{t}</option>)}</select>
-      </div>
-      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-        <table className="w-full text-sm"><thead className="bg-gray-50"><tr className="text-left text-gray-500"><th className="p-3">成员</th><th className="p-3">角色</th><th className="p-3">标签</th><th className="p-3">模板</th><th className="p-3">状态</th><th className="p-3 text-right">本月消耗</th><th className="p-3 text-right">限额</th><th className="p-3">操作</th></tr></thead>
-        <tbody>{filtered.map(m=>{const r=m.quota>0?m.cost/m.quota:0;return(
-          <tr key={m.id} className={`border-t hover:bg-gray-50 ${r>=1?"bg-red-50":""}`}>
-            <td className="p-3"><p className="font-medium">{m.name}</p><p className="text-xs text-gray-400">{m.email}</p></td>
-            <td className="p-3"><span className={`px-2 py-0.5 rounded text-xs ${m.role==="admin"?"bg-purple-100 text-purple-700":"bg-gray-100 text-gray-600"}`}>{m.role==="admin"?"管理员":"成员"}</span></td>
-            <td className="p-3"><div className="flex gap-1 flex-wrap">{m.tags.map(t=><span key={t} className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-xs">{t}</span>)}</div></td>
-            <td className="p-3 text-gray-600">{m.template||"—"}</td>
-            <td className="p-3"><span className="text-green-600 text-xs">● 正常</span></td>
-            <td className="p-3 text-right font-medium">{m.cost.toLocaleString()}</td>
-            <td className="p-3 text-right text-xs">{m.qp==="day"?`日限${m.quota}`:`月限${m.quota.toLocaleString()}`}</td>
-            <td className="p-3"><button onClick={()=>setShowEdit(m.id)} className="text-indigo-600 text-xs hover:underline">编辑</button></td>
-          </tr>
-        )})}</tbody></table>
-      </div>
-      {showInvite&&<Modal title="邀请成员" onClose={()=>setShowInvite(false)}>
-        <div className="space-y-3">
-          <div><label className="text-sm text-gray-600 block mb-1">邮箱</label><input className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="输入邮箱"/></div>
-          <div><label className="text-sm text-gray-600 block mb-1">标签</label><select className="w-full px-3 py-2 border rounded-lg text-sm"><option>选择标签...</option>{tags.map(t=><option key={t}>{t}</option>)}</select></div>
-          <div><label className="text-sm text-gray-600 block mb-1">限额模板</label><select className="w-full px-3 py-2 border rounded-lg text-sm">{templates.map(t=><option key={t.name}>{t.name}</option>)}</select></div>
-          <p className="text-xs text-gray-400">⚠️ 仅支持未注册 MetaChat 的邮箱</p>
-        </div>
-      </Modal>}
-      {showEdit&&<Modal title={`编辑成员：${members.find(m=>m.id===showEdit)?.name}`} onClose={()=>setShowEdit(null)}>
-        <div className="space-y-3">
-          <div><label className="text-sm font-medium block mb-1">标签</label><div className="flex gap-1 flex-wrap">{members.find(m=>m.id===showEdit)?.tags.map(t=><span key={t} className="px-2 py-1 bg-blue-50 text-blue-600 rounded text-xs">{t} ×</span>)}<button className="px-2 py-1 border border-dashed rounded text-xs text-gray-400">+ 添加</button></div></div>
-          <div><label className="text-sm font-medium block mb-1">限额模板</label><select className="w-full px-3 py-2 border rounded-lg text-sm">{templates.map(t=><option key={t.name}>{t.name}</option>)}</select></div>
-          <div className="border-t pt-3"><p className="text-sm font-medium mb-2">个人覆盖设置</p>
-            <div className="space-y-2"><label className="flex items-center gap-2 text-sm"><input type="radio" name="q" defaultChecked/> 跟随模板</label><label className="flex items-center gap-2 text-sm"><input type="radio" name="q"/> 自定义额度</label></div>
-          </div>
-        </div>
-      </Modal>}
+function renderMembers(){
+  const d=document.createElement("div");
+  const flt=state.memberFilter;
+  const fl=flt==="全部"?members:members.filter(m=>m.tags.includes(flt));
+  d.innerHTML=`
+    <div class="page-header"><h2>成员管理</h2><button class="btn btn-primary" onclick="showModal('invite')">+ 邀请成员</button></div>
+    <div class="filter-bar">
+      <input class="form-input" style="width:256px" placeholder="搜索成员姓名/邮箱"/>
+      <select class="form-select" style="width:auto" id="tag-filter"><option>全部</option>${allTags.map(t=>`<option${flt===t.n?" selected":""}>${t.n}</option>`).join("")}</select>
     </div>
-  );
+    <div class="table-wrap"><table><thead><tr><th>成员</th><th>角色</th><th>标签</th><th>模板</th><th>状态</th><th class="text-right">本月消耗</th><th class="text-right">限额</th><th>操作</th></tr></thead>
+    <tbody>${fl.map(m=>{const r=m.quota>0?m.cost/m.quota:0;return `<tr style="${r>=1?"background:#fef2f2":""}">
+      <td><div class="font-medium">${m.n}</div><div class="text-xs text-gray">${m.e}</div></td>
+      <td><span class="tag ${m.role==="admin"?"tag-purple":"tag-gray"}">${m.role==="admin"?"管理员":"成员"}</span></td>
+      <td>${m.tags.map(t=>`<span class="tag tag-blue">${t}</span>`).join(" ")}</td>
+      <td class="text-gray">${m.tpl||"—"}</td>
+      <td><span class="status-dot status-${m.st}"></span><span class="text-xs">${m.st==="active"?"正常":"已禁用"}</span></td>
+      <td class="text-right font-medium">${fmt(m.cost)}</td>
+      <td class="text-right text-xs">${m.qp==="day"?"日限"+m.quota:"月限"+fmt(m.quota)}</td>
+      <td><button class="text-xs" style="color:#4f46e5;background:none;border:none;cursor:pointer" onclick="showModal('edit',${m.id})">编辑</button></td>
+    </tr>`}).join("")}</tbody></table></div>`;
+  d.querySelector("#tag-filter").onchange=e=>{state.memberFilter=e.target.value;render()};
+  return d;
 }
 
-function TagManagement() {
-  const [showCreate, setShowCreate] = useState(false);
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between"><h2 className="text-xl font-bold">成员标签</h2><button onClick={()=>setShowCreate(true)} className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700">+ 新建标签</button></div>
-      <div className="bg-white rounded-xl border shadow-sm">{tags.map((t,i)=>(
-        <div key={t} className={`flex items-center justify-between px-5 py-4 ${i>0?"border-t":""}`}>
-          <div className="flex items-center gap-3"><span className="px-2.5 py-1 bg-blue-50 text-blue-600 rounded-md text-sm font-medium">{t}</span><span className="text-sm text-gray-400">{Math.floor(Math.random()*12+2)} 人</span></div>
-          <div className="flex gap-2"><button className="text-sm text-gray-500 hover:text-indigo-600">编辑</button><button className="text-sm text-gray-500 hover:text-red-500">删除</button></div>
-        </div>
-      ))}</div>
-      {showCreate&&<Modal title="新建标签" onClose={()=>setShowCreate(false)}><input placeholder="标签名称（2-20字符）" className="w-full px-3 py-2 border rounded-lg text-sm"/></Modal>}
+function renderTags(){
+  const d=document.createElement("div");
+  d.innerHTML=`
+    <div class="page-header"><h2>成员标签</h2><button class="btn btn-primary" onclick="showModal('tag')">+ 新建标签</button></div>
+    <div class="table-wrap">${allTags.map(t=>`<div class="tag-list-item"><div class="tl-left"><span class="tag tag-blue" style="font-size:14px;font-weight:500">${t.n}</span><span class="text-sm text-gray">${t.c} 人</span></div><div class="tl-actions"><button style="color:#4f46e5">编辑</button><button style="color:#ef4444">删除</button></div></div>`).join("")}</div>`;
+  return d;
+}
+
+function renderTemplates(){
+  const d=document.createElement("div");
+  d.innerHTML=`
+    <div class="page-header"><h2>限额模板</h2><button class="btn btn-primary" onclick="showModal('template')">+ 新建模板</button></div>
+    <div class="template-grid">${templates.map(t=>`<div class="template-card">
+      <div class="tc-top"><h4>${t.n} ${t.d?'<span class="tag tag-gray">预置</span>':""}</h4><span class="text-sm text-gray">${t.mc} 人</span></div>
+      <div class="tc-meta">额度：${t.q}<br>模型：${t.m}<br>时段：${t.t}</div>
+      <div class="tc-footer"><button style="color:#4f46e5">编辑</button>${!t.d?'<button style="color:#ef4444">删除</button>':""}</div>
+    </div>`).join("")}</div>`;
+  return d;
+}
+
+function renderBills(){
+  const d=document.createElement("div");
+  d.innerHTML=`
+    <div class="page-header"><h2>账单看板</h2><button class="btn btn-outline">导出 CSV</button></div>
+    <div class="filter-bar">
+      <select class="form-select" style="width:auto"><option>本月</option><option>上月</option></select>
+      <select class="form-select" style="width:auto"><option>全部成员</option>${members.map(m=>`<option>${m.n}</option>`).join("")}</select>
+      <select class="form-select" style="width:auto"><option>全部渠道</option><option>网页端</option><option>API</option></select>
     </div>
-  );
-}
-
-function TemplateManagement() {
-  const [showCreate, setShowCreate] = useState(false);
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between"><h2 className="text-xl font-bold">限额模板</h2><button onClick={()=>setShowCreate(true)} className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700">+ 新建模板</button></div>
-      <div className="grid grid-cols-2 gap-4">{templates.map(t=>(
-        <div key={t.id} className="bg-white rounded-xl border p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-3"><div className="flex items-center gap-2"><h3 className="font-medium">{t.name}</h3>{t.isDefault&&<span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">预置</span>}</div><span className="text-sm text-gray-400">{t.count} 人</span></div>
-          <div className="space-y-1.5 text-sm text-gray-600"><p>额度：{t.quota}</p><p>模型：{t.model}</p><p>时段：{t.time}</p></div>
-          <div className="flex gap-2 mt-4 pt-3 border-t"><button className="text-sm text-indigo-600 hover:underline">编辑</button>{!t.isDefault&&<button className="text-sm text-red-500 hover:underline">删除</button>}</div>
-        </div>
-      ))}</div>
-      {showCreate&&<Modal title="新建限额模板" onClose={()=>setShowCreate(false)}>
-        <div className="space-y-4">
-          <div><label className="text-sm font-medium block mb-1">模板名称</label><input className="w-full px-3 py-2 border rounded-lg text-sm" placeholder="如：技术岗"/></div>
-          <div><label className="text-sm font-medium block mb-2">额度限制</label><div className="space-y-2"><label className="flex items-center gap-2 text-sm"><input type="radio" name="tq" defaultChecked/> 不设限</label><label className="flex items-center gap-2 text-sm"><input type="radio" name="tq"/> 设置上限</label></div></div>
-          <div><label className="text-sm font-medium block mb-2">模型访问</label><div className="space-y-2"><label className="flex items-center gap-2 text-sm"><input type="radio" name="tm" defaultChecked/> 不限制</label><label className="flex items-center gap-2 text-sm"><input type="radio" name="tm"/> 白名单</label><label className="flex items-center gap-2 text-sm"><input type="radio" name="tm"/> 黑名单</label></div></div>
-          <div><label className="text-sm font-medium block mb-2">使用时段</label><div className="space-y-2"><label className="flex items-center gap-2 text-sm"><input type="radio" name="tt" defaultChecked/> 全天候</label><label className="flex items-center gap-2 text-sm"><input type="radio" name="tt"/> 自定义时段</label></div></div>
-        </div>
-      </Modal>}
+    <div class="kpi-row">
+      <div class="kpi-card"><div class="label">总消耗</div><div class="value">485 <span class="unit">元点</span></div></div>
+      <div class="kpi-card"><div class="label">网页端</div><div class="value">305 <span class="unit">(63%)</span></div></div>
+      <div class="kpi-card"><div class="label">API</div><div class="value">180 <span class="unit">(37%)</span></div></div>
     </div>
-  );
+    <div class="table-wrap"><table><thead><tr><th>时间</th><th>成员</th><th>渠道</th><th>模型</th><th class="text-right">消耗</th></tr></thead>
+    <tbody>${bills.map(b=>`<tr><td class="text-gray">${b.d}</td><td class="font-medium">${b.m}</td><td><span class="tag ${b.ch==="API"?"tag-purple":"tag-blue"}">${b.ch}</span></td><td class="text-gray">${b.mod}</td><td class="text-right font-medium">${b.cost}</td></tr>`).join("")}</tbody></table></div>`;
+  return d;
 }
 
-function BillBoard() {
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between"><h2 className="text-xl font-bold">账单看板</h2><button className="px-4 py-2 bg-white border text-sm rounded-lg hover:bg-gray-50">导出 CSV</button></div>
-      <div className="flex gap-3 bg-white rounded-xl p-3 border">
-        <select className="px-3 py-2 border rounded-lg text-sm"><option>本月</option><option>上月</option></select>
-        <select className="px-3 py-2 border rounded-lg text-sm"><option>全部成员</option>{members.map(m=><option key={m.id}>{m.name}</option>)}</select>
-        <select className="px-3 py-2 border rounded-lg text-sm"><option>全部渠道</option><option>网页端</option><option>API</option></select>
-      </div>
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl p-4 border"><p className="text-xs text-gray-500">总消耗</p><p className="text-xl font-bold mt-1">12,580 元点</p></div>
-        <div className="bg-white rounded-xl p-4 border"><p className="text-xs text-gray-500">网页端</p><p className="text-xl font-bold mt-1">4,820 (38%)</p></div>
-        <div className="bg-white rounded-xl p-4 border"><p className="text-xs text-gray-500">API</p><p className="text-xl font-bold mt-1">7,760 (62%)</p></div>
-      </div>
-      <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
-        <table className="w-full text-sm"><thead className="bg-gray-50"><tr className="text-left text-gray-500"><th className="p-3">时间</th><th className="p-3">成员</th><th className="p-3">渠道</th><th className="p-3">模型</th><th className="p-3 text-right">消耗</th></tr></thead>
-        <tbody>{[{d:"05-06",m:"张三",c:"API",model:"GPT-5.4",cost:85},{d:"05-06",m:"李四",c:"网页端",model:"Claude Opus",cost:62},{d:"05-06",m:"王五",c:"API",model:"GPT-5",cost:45},{d:"05-05",m:"张三",c:"网页端",model:"GPT-5.4",cost:120},{d:"05-05",m:"赵六",c:"API",model:"Gemini 2.5",cost:38},{d:"05-05",m:"孙七",c:"网页端",model:"Midjourney",cost:95}].map((b,i)=>(
-          <tr key={i} className="border-t hover:bg-gray-50"><td className="p-3 text-gray-600">2026-{b.d}</td><td className="p-3 font-medium">{b.m}</td><td className="p-3"><span className={`px-2 py-0.5 rounded text-xs ${b.c==="API"?"bg-purple-50 text-purple-600":"bg-blue-50 text-blue-600"}`}>{b.c}</span></td><td className="p-3 text-gray-600">{b.model}</td><td className="p-3 text-right font-medium">{b.cost}</td></tr>
-        ))}</tbody></table>
-      </div>
+function renderRecharge(){
+  const d=document.createElement("div");
+  d.innerHTML=`
+    <div class="page-header"><h2>充值管理</h2></div>
+    <div class="balance-card">
+      <div class="bal-label">企业元点余额</div>
+      <div class="bal-value">${fmt(enterprise.balance)} <span class="bal-unit">元点</span></div>
+      <div class="bal-note">按近30天消耗速率，预计可用 28 天</div>
+      <div class="bal-actions"><button class="btn-white">立即充值</button><button class="btn-ghost" onclick="showModal('alert')">预警设置</button></div>
     </div>
-  );
+    <div class="chart-box" style="margin-bottom:20px"><h3>充值规则</h3><ul style="line-height:2;font-size:14px;color:#4b5563;list-style:none;padding-left:0"><li>· 最低起充 ¥1,000（1,000 元点）</li><li>· 支持微信、支付宝、对公转账</li><li>· 对公转账后联系客服申请发票</li></ul></div>
+    <div class="table-wrap"><div style="padding:12px 20px;border-bottom:1px solid #f3f4f6"><h3 style="font-size:14px;font-weight:500">充值记录</h3></div>
+    <table><thead><tr><th>时间</th><th class="text-right">金额</th><th>方式</th><th>状态</th><th>发票</th></tr></thead>
+    <tbody>${recharges.map(r=>`<tr><td class="text-gray">${r.d}</td><td class="text-right font-medium">${fmt(r.a)}</td><td>${r.m}</td><td class="text-green text-xs">✓ 成功</td><td class="text-xs">${r.inv}</td></tr>`).join("")}</tbody></table></div>`;
+  return d;
 }
 
-function RechargeManagement() {
-  const [showAlert, setShowAlert] = useState(false);
-  return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-bold">充值管理</h2>
-      <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl p-6 text-white shadow-lg">
-        <p className="text-sm text-indigo-100">企业元点余额</p>
-        <p className="text-4xl font-bold mt-2">{enterprise.balance.toLocaleString()} <span className="text-lg font-normal text-indigo-100">元点</span></p>
-        <p className="text-xs text-indigo-100 mt-2">预计可用 28 天</p>
-        <div className="flex gap-3 mt-4"><button className="px-4 py-2 bg-white text-indigo-600 rounded-lg text-sm font-medium">立即充值</button><button onClick={()=>setShowAlert(true)} className="px-4 py-2 bg-white/20 border border-white/30 rounded-lg text-sm">预警设置</button></div>
-      </div>
-      <div className="bg-white rounded-xl p-5 border"><h3 className="text-sm font-medium mb-3">充值规则</h3><ul className="space-y-1.5 text-sm text-gray-600"><li>· 最低起充 ¥1,000（1,000 元点）</li><li>· 支持微信、支付宝、对公转账</li><li>· 对公转账后联系客服申请发票</li></ul></div>
-      <div className="bg-white rounded-xl border shadow-sm overflow-hidden"><div className="px-5 py-3 border-b"><h3 className="text-sm font-medium">充值记录</h3></div>
-        <table className="w-full text-sm"><thead className="bg-gray-50"><tr className="text-left text-gray-500"><th className="p-3">时间</th><th className="p-3 text-right">金额</th><th className="p-3">方式</th><th className="p-3">状态</th><th className="p-3">发票</th></tr></thead>
-        <tbody>{[{d:"2026-05-01",a:10000,m:"对公转账",inv:"已开具"},{d:"2026-04-15",a:5000,m:"微信支付",inv:"未申请"},{d:"2026-04-01",a:10000,m:"对公转账",inv:"已开具"}].map((r,i)=>(
-          <tr key={i} className="border-t hover:bg-gray-50"><td className="p-3 text-gray-600">{r.d}</td><td className="p-3 text-right font-medium">{r.a.toLocaleString()}</td><td className="p-3">{r.m}</td><td className="p-3 text-green-600 text-xs">✓ 成功</td><td className="p-3 text-xs">{r.inv}</td></tr>
-        ))}</tbody></table>
-      </div>
-      {showAlert&&<Modal title="预警设置" onClose={()=>setShowAlert(false)}>
-        <div className="space-y-4">
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" defaultChecked/> 启用余额预警</label>
-          <div><label className="text-sm block mb-1">预警阈值</label><div className="flex items-center gap-2"><input type="number" defaultValue={500} className="flex-1 px-3 py-2 border rounded-lg text-sm"/><span className="text-sm text-gray-500">元点</span></div><p className="text-xs text-gray-400 mt-1">余额低于此数值时通知</p></div>
-          <div><label className="text-sm block mb-2">通知方式</label><label className="flex items-center gap-2 text-sm"><input type="checkbox" defaultChecked/> 邮件</label><label className="flex items-center gap-2 text-sm ml-4"><input type="checkbox" defaultChecked/> 站内通知</label></div>
-        </div>
-      </Modal>}
-    </div>
-  );
+function showModal(type, id){
+  let html="";
+  if(type==="invite"){
+    html=`<h3>邀请成员</h3>
+      <div class="form-group"><label>邮箱</label><input class="form-input" placeholder="输入邮箱地址"/></div>
+      <div class="form-group"><label>标签</label><select class="form-select"><option>选择标签...</option>${allTags.map(t=>`<option>${t.n}</option>`).join("")}</select></div>
+      <div class="form-group"><label>限额模板</label><select class="form-select">${templates.map(t=>`<option>${t.n}</option>`).join("")}</select></div>
+      <p class="text-xs text-gray" style="margin-top:8px">⚠️ 仅支持未注册 MetaChat 的邮箱</p>`;
+  } else if(type==="edit"){
+    const m=members.find(x=>x.id===id);
+    html=`<h3>编辑成员：${m.n}</h3><p class="text-sm text-gray" style="margin-bottom:16px">${m.e}</p>
+      <div class="form-group"><label style="font-weight:500">标签</label><div>${m.tags.map(t=>`<span class="tag tag-blue">${t} ×</span>`).join(" ")} <span class="tag tag-gray" style="border:1px dashed #d1d5db;cursor:pointer">+ 添加</span></div></div>
+      <div class="form-group"><label style="font-weight:500">限额模板</label><select class="form-select">${templates.map(t=>`<option${t.n===m.tpl?" selected":""}>${t.n}</option>`).join("")}</select></div>
+      <div style="border-top:1px solid #f3f4f6;padding-top:16px;margin-top:16px">
+        <p style="font-weight:500;font-size:14px;margin-bottom:12px">个人覆盖设置</p>
+        <div class="form-group"><label class="text-xs text-gray">额度</label><div class="radio-group"><label class="radio-label"><input type="radio" name="q" checked/> 跟随模板</label><label class="radio-label"><input type="radio" name="q"/> 自定义</label></div></div>
+        <div class="form-group"><label class="text-xs text-gray">模型访问</label><div class="radio-group"><label class="radio-label"><input type="radio" name="m" checked/> 跟随模板</label><label class="radio-label"><input type="radio" name="m"/> 自定义</label></div></div>
+        <div class="form-group"><label class="text-xs text-gray">时段</label><div class="radio-group"><label class="radio-label"><input type="radio" name="t" checked/> 跟随模板</label><label class="radio-label"><input type="radio" name="t"/> 自定义</label><label class="radio-label"><input type="radio" name="t"/> 不限制</label></div></div>
+      </div>`;
+  } else if(type==="tag"){
+    html=`<h3>新建标签</h3><div class="form-group"><label>标签名称</label><input class="form-input" placeholder="标签名称（2-20字符）"/></div>`;
+  } else if(type==="template"){
+    html=`<h3>新建限额模板</h3>
+      <div class="form-group"><label>模板名称</label><input class="form-input" placeholder="如：技术岗"/></div>
+      <div class="form-group"><label style="font-weight:500">额度限制</label><div class="radio-group"><label class="radio-label"><input type="radio" name="tq" checked/> 不设限</label><label class="radio-label"><input type="radio" name="tq"/> 设置上限</label></div></div>
+      <div class="form-group"><label style="font-weight:500">模型访问</label><div class="radio-group"><label class="radio-label"><input type="radio" name="tm" checked/> 不限制</label><label class="radio-label"><input type="radio" name="tm"/> 白名单</label><label class="radio-label"><input type="radio" name="tm"/> 黑名单</label></div></div>
+      <div class="form-group"><label style="font-weight:500">使用时段</label><div class="radio-group"><label class="radio-label"><input type="radio" name="tt" checked/> 全天候</label><label class="radio-label"><input type="radio" name="tt"/> 自定义时段</label></div></div>`;
+  } else if(type==="alert"){
+    html=`<h3>预警设置</h3><p class="text-sm text-gray" style="margin-bottom:16px">余额低于阈值时自动通知</p>
+      <div class="form-group"><label class="radio-label"><input type="checkbox" checked/> 启用余额预警</label></div>
+      <div class="form-group"><label>预警阈值</label><div style="display:flex;align-items:center;gap:8px"><input class="form-input" type="number" value="500" style="width:auto;flex:1"/><span class="text-sm text-gray">元点</span></div><p class="text-xs text-gray" style="margin-top:4px">余额低于此数值时通知</p></div>
+      <div class="form-group"><label style="margin-bottom:8px">通知方式</label><label class="radio-label" style="margin-bottom:4px"><input type="checkbox" checked/> 邮件通知</label><label class="radio-label"><input type="checkbox" checked/> 站内通知</label></div>`;
+  }
+  const overlay=document.createElement("div");
+  overlay.className="modal-overlay";
+  overlay.onclick=e=>{if(e.target===overlay)overlay.remove()};
+  overlay.innerHTML=`<div class="modal">${html}<div class="modal-footer"><button class="btn btn-outline" id="modal-cancel">取消</button><button class="btn btn-primary" id="modal-ok">确认</button></div></div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelector("#modal-cancel").onclick=()=>overlay.remove();
+  overlay.querySelector("#modal-ok").onclick=()=>overlay.remove();
 }
 
-function Modal({title, onClose, children}) {
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white rounded-xl p-6 w-[480px] max-h-[90vh] overflow-auto" onClick={e=>e.stopPropagation()}>
-        <h3 className="text-lg font-bold mb-4">{title}</h3>
-        {children}
-        <div className="flex justify-end gap-3 mt-6"><button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg">取消</button><button onClick={onClose} className="px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">确认</button></div>
-      </div>
-    </div>
-  );
+function render(){
+  const root=document.getElementById("root");
+  root.innerHTML="";
+  root.className="app";
+  root.appendChild(renderSidebar());
+  const main=document.createElement("main");
+  main.className="main";
+  if(state.page==="dashboard")main.appendChild(renderDashboard());
+  else if(state.page==="members")main.appendChild(renderMembers());
+  else if(state.page==="tags")main.appendChild(renderTags());
+  else if(state.page==="templates")main.appendChild(renderTemplates());
+  else if(state.page==="bills")main.appendChild(renderBills());
+  else if(state.page==="recharge")main.appendChild(renderRecharge());
+  root.appendChild(main);
 }
 
-// === App ===
-function App() {
-  const [page, setPage] = useState("dashboard");
-  const [role, setRole] = useState("owner");
-  return (
-    <div className="flex h-screen">
-      <Sidebar page={page} setPage={setPage} role={role} setRole={setRole}/>
-      <main className="flex-1 overflow-auto p-6">
-        {page==="dashboard"&&<Dashboard/>}
-        {page==="members"&&<MemberManagement/>}
-        {page==="tags"&&<TagManagement/>}
-        {page==="templates"&&<TemplateManagement/>}
-        {page==="bills"&&<BillBoard/>}
-        {page==="recharge"&&<RechargeManagement/>}
-      </main>
-    </div>
-  );
-}
-
-ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+render();
 </script>
 </body>
 </html>
